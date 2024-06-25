@@ -1,51 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import './App.css'; // Import CSS file for styling
+import React, {useEffect, useState} from 'react';
+import './App.css';
+import axios from "axios"; // Import CSS file for styling
 
 interface Song {
-  id: number;
-  name: string;
-  genre: {
     id: number;
     name: string;
-  };
+    genre: {
+        id: number;
+        name: string;
+    };
 }
 
 function App(): JSX.Element {
-  const [songs, setSongs] = useState<Song[]>([]);
+    const [songs, setSongs] = useState<Song[] | null>(null);
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
 
-  useEffect(() => {
-    async function fetchSongs() {
-      try {
-        // Encode username and password in Base64
-        const token = btoa('john:12345');
-        const response = await fetch('http://localhost:8080/songs?page=0&size=50&sort=ASC', {
-          headers: {
-            Authorization: `Basic ${token}`, // Add the authorization header
-          },
-        });
-        const data = await response.json();
-        setSongs(data.songs);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await axios.get('http://localhost:8080/songs', {
+                    withCredentials: true // Include credentials (cookies) in requests
+                });
+                setSongs(response.data);
+            } catch (error) {
+                console.error('Error fetching songs:', error);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        try {
+            await axios.post('http://localhost:8080/token', {
+                username,
+                password
+            }, {
+                withCredentials: true // Include credentials (cookies) in requests
+            });
+            window.location.reload(); // Reload to trigger fetching songs
+        } catch (error) {
+            console.error('Error logging in:', error);
+        }
+    };
+
+    // Check if songs data is fetched (user is logged in)
+    if (songs !== null) {
+        return (
+            <div>
+                <h1>Home</h1>
+                <pre>{JSON.stringify(songs, null, 2)}</pre>
+            </div>
+        );
     }
 
-    fetchSongs();
-  }, []); // No dependencies, fetch songs only once
-
-  return (
-      <div className="container">
-        <h1>Songs</h1>
-        <ul className="song-list">
-          {songs.map((song) => (
-              <li key={song.id} className="song-item">
-                <div className="song-name">{song.name}</div>
-                <div className="genre">{song.genre.name}</div>
-              </li>
-          ))}
-        </ul>
-      </div>
-  );
+    // If songs data is not fetched (user is not logged in), show login form
+    return (
+        <div>
+            <h1>Login</h1>
+            <form onSubmit={handleLogin}>
+                <div>
+                    <label>
+                        Username:
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                        />
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        Password:
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </label>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    );
 }
 
 export default App;
