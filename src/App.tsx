@@ -19,7 +19,7 @@ function App(): JSX.Element {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axios.get('http://localhost:8080/songs', {
+                const response = await axios.get('https://localhost:8080/songs', {
                     withCredentials: true // Include credentials (cookies) in requests
                 });
                 setSongs(response.data);
@@ -34,7 +34,7 @@ function App(): JSX.Element {
     const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         try {
-            await axios.post('http://localhost:8080/token', {
+            await axios.post('https://localhost:8080/token', {
                 username,
                 password
             }, {
