@@ -1,6 +1,5 @@
 import React, {useEffect, useState} from 'react';
 import './App.css';
-import axios from "axios"; // Import CSS file for styling
 
 interface Song {
     id: number;
@@ -13,78 +12,47 @@ interface Song {
 
 function App(): JSX.Element {
     const [songs, setSongs] = useState<Song[] | null>(null);
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await axios.get('https://localhost:8080/songs', {
-                    withCredentials: true // Include credentials (cookies) in requests
-                });
-                setSongs(response.data);
-            } catch (error) {
-                console.error('Error fetching songs:', error);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const getSongs = async () => {
         try {
-            await axios.post('https://localhost:8080/token', {
-                username,
-                password
-            }, {
-                withCredentials: true // Include credentials (cookies) in requests
+            const response = await fetch('https://localhost:8443/songs', {
+                method: 'GET',
+                redirect: 'follow',
+                credentials: 'include',
             });
-            window.location.reload(); // Reload to trigger fetching songs
+            if (response.status === 401) {
+                // Handle 401 Unauthorized by redirecting to the OAuth2 login endpoint
+                // @ts-ignore
+                window.location.href = 'https://localhost:8443/oauth2/authorization/google' as unknown as Location; // Explicitly cast as Location
+                return;
+            }
+            if (response.ok) {
+                const data = await response.json();
+                setSongs(data);
+            } else {
+                console.error('Error fetching songs:', response.statusText);
+            }
         } catch (error) {
-            console.error('Error logging in:', error);
+            console.error('Error during fetch:', error);
         }
     };
 
-    // Check if songs data is fetched (user is logged in)
+    useEffect(() => {
+        getSongs();
+    }, []);
+
     if (songs !== null) {
         return (
             <div>
-                <h1>Home</h1>
+                <h1>Logged In</h1>
                 <pre>{JSON.stringify(songs, null, 2)}</pre>
             </div>
         );
     }
 
-    // If songs data is not fetched (user is not logged in), show login form
     return (
         <div>
-            <h1>Login</h1>
-            <form onSubmit={handleLogin}>
-                <div>
-                    <label>
-                        Username:
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            required
-                        />
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        Password:
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
-                    </label>
-                </div>
-                <button type="submit">Login</button>
-            </form>
+            <h1>Not Logged In</h1>
         </div>
     );
 }
